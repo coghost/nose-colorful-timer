@@ -1,10 +1,12 @@
 import json
 import logging
 import os
+import sys
 import re
 import timeit
 
 from nose.plugins import Plugin
+from ._color import *
 
 try:
     import Queue
@@ -20,6 +22,7 @@ except ImportError:
 
 try:
     import colorama
+
     TERMCOLOR2COLORAMA = {
         'green': colorama.Fore.GREEN,
         'yellow': colorama.Fore.YELLOW,
@@ -36,6 +39,7 @@ _results_queue = None
 if not IS_NT:
     import multiprocessing
     from multiprocessing import queues
+
 
     class TimerQueue(queues.Queue):
         """A portable implementation of multiprocessing.Queue.
@@ -74,8 +78,8 @@ if not IS_NT:
             """Reliable implementation of multiprocessing.Queue.empty()."""
             return not self.qsize()
 
-    _results_queue = TimerQueue()
 
+    _results_queue = TimerQueue()
 
 log = logging.getLogger('nose.plugin.timer')
 
@@ -194,6 +198,9 @@ class TimerPlugin(Plugin):
 
         total_time = sum([vv['time'] for kk, vv in d])
 
+        # the number of tests used for `(index/total): (1/12)`
+        self.total_tests = len(d)
+        stream.writeln(C.format(SEPARATOR * 64))
         for i, (test, time_and_status) in enumerate(d):
             time_taken = time_and_status['time']
             status = time_and_status['status']
@@ -206,10 +213,12 @@ class TimerPlugin(Plugin):
                     color=color,
                     status=status,
                     percent=percent,
+                    index=i,
                 )
                 _filter = self._COLOR_TO_FILTER.get(color)
                 if self.timer_filter is None or _filter is None or _filter in self.timer_filter:
                     stream.writeln(line)
+        stream.writeln(C.format(SEPARATOR * 64))
 
     def _get_result_color(self, time_taken):
         """Get time taken result color."""
@@ -240,10 +249,30 @@ class TimerPlugin(Plugin):
 
         return _colorize("{0:0.4f}s".format(time_taken), color)
 
-    def _format_report_line(self, test, time_taken, color, status, percent):
+    @staticmethod
+    def _shorten_dir():
+        # rm file/module/package in sys.argv[-1]
+        params = [param for param in sys.argv if '.py' in param]
+        params = [param for param in params if '/' in param][-1].replace('.py', '').split('/')
+        return params
+
+    def _format_report_line(self, test, time_taken, color, status, percent, index):
         """Format a single report line."""
-        return "[{0}] {3:04.2f}% {1}: {2}".format(
-            status, test, self._colored_time(time_taken, color), percent
+        _hint_num = '%{}s'.format(self.total_tests // 10 + 1) % (index + 1)
+        _shorten = self._shorten_dir()
+        test = test.replace('.'.join(_shorten), '')
+        if test.startswith('.'):
+            test = test[1:]
+        if status == 'success':
+            status = G.format('[' + OK + ']')
+            index = G.format('({}/{})'.format(_hint_num, self.total_tests))
+        else:
+            status = R.format('[' + FAIL + ']')
+            index = R.format('({}/{})'.format(_hint_num, self.total_tests))
+            test = R.format(test)
+        percent = colorful(percent)
+        return "{} {} {} {} {}".format(
+            index, status, self._colored_time(time_taken, color), percent, test,
         )
 
     def _register_time(self, test, status=None):
@@ -274,6 +303,7 @@ class TimerPlugin(Plugin):
 
     def prepareTestResult(self, result):
         """Called before the first test is run."""
+
         def _add_success(result, test):
             """Called when a test passes."""
             if result.showAll:
