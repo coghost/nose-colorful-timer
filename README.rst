@@ -30,6 +30,19 @@ source frequently::
     pip install -e .
 
 
+Install colorful
+-------
+
+to install the latest from source::
+
+    git clone https://github.com/coghost/nose-colorful-timer.git
+    cd nose-colorful-timer
+    pip install .
+
+to uninstall the latest from source::
+    pip uninstall nose-timer
+
+
 Usage
 -----
 
