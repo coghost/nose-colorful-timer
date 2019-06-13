@@ -245,20 +245,24 @@ class TimerPlugin(Plugin):
     def _colored_time(self, time_taken, color=None):
         """Get formatted and colored string for a given time taken."""
         if self.timer_no_color:
-            return "{0:0.4f}s".format(time_taken)
+            return "{0:>7.4f}s".format(time_taken)
 
-        return _colorize("{0:0.4f}s".format(time_taken), color)
+        return _colorize("{0:>7.4f}s".format(time_taken), color)
 
     @staticmethod
     def _shorten_dir():
         # rm file/module/package in sys.argv[-1]
-        params = [param for param in sys.argv if '.py' in param]
-        params = [param for param in params if '/' in param][-1].replace('.py', '').split('/')
-        return params
+        try:
+            params = [param for param in sys.argv if '.py' in param] or sys.argv
+            params = [param for param in params if '/' in param][-1].replace('.py', '')
+            params = [x for x in params.split('/') if x]
+            return params
+        except:
+            return ''
 
     def _format_report_line(self, test, time_taken, color, status, percent, index):
         """Format a single report line."""
-        _hint_num = '%{}s'.format(self.total_tests // 10 + 1) % (index + 1)
+        _hint_num = '%{}s'.format(len(str(self.total_tests))) % (index + 1)
         _shorten = self._shorten_dir()
         test = test.replace('.'.join(_shorten), '')
         if test.startswith('.'):
