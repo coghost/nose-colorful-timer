@@ -189,7 +189,10 @@ class TimerPlugin(Plugin):
                 except Queue.Empty:
                     pass
 
-        d = sorted(self._timed_tests.items(), key=lambda item: item[1]['time'], reverse=True)
+        if ORDER:
+            d = sorted(self._timed_tests.items(), key=lambda item: item[1]['time'], reverse=ORDER == -1)
+        else:
+            d = self._timed_tests.items()
 
         if self.json_file:
             dict_type = OrderedDict if self.timer_top_n else dict
@@ -200,7 +203,7 @@ class TimerPlugin(Plugin):
 
         # the number of tests used for `(index/total): (1/12)`
         self.total_tests = len(d)
-        stream.writeln(C.format(SEPARATOR * 64))
+        stream.writeln(C.format(SEPARATOR_U * (64 // len(SEPARATOR_U))))
         for i, (test, time_and_status) in enumerate(d):
             time_taken = time_and_status['time']
             status = time_and_status['status']
@@ -218,7 +221,7 @@ class TimerPlugin(Plugin):
                 _filter = self._COLOR_TO_FILTER.get(color)
                 if self.timer_filter is None or _filter is None or _filter in self.timer_filter:
                     stream.writeln(line)
-        stream.writeln(C.format(SEPARATOR * 64))
+        stream.writeln(C.format(SEPARATOR_D * (64 // len(SEPARATOR_D))))
 
     def _get_result_color(self, time_taken):
         """Get time taken result color."""
@@ -226,9 +229,9 @@ class TimerPlugin(Plugin):
         if time_taken_ms <= self.timer_ok:
             color = 'green'
         elif time_taken_ms <= self.timer_warning:
-            color = 'yellow'
+            color = 'cyan'
         else:
-            color = 'red'
+            color = 'yellow'
 
         return color
 
